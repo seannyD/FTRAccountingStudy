@@ -1,10 +1,10 @@
 #!/bin/sh
 #
-#PBS -l nodes=1:ppn=1,pmem=1gb,walltime=100:00:00
+#PBS -l nodes=1:ppn=8,pmem=1gb,walltime=100:00:00
 #PBS -N RMMME
-#PBS -o $HOME/R/FTRAccounting/analysis
+#PBS -o $HOME/R/FTRAccounting/FTRAccountingStudy/analysis
 
-export WORK_DIR=$HOME/R/FTRAccounting/analysis
+export WORK_DIR=$HOME/R/FTRAccounting/FTRAccountingStudy/analysis
 
 cd $WORK_DIR
 
