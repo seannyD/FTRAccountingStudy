@@ -1,0 +1,39 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r}
+library(brms)
+```
+
+Load data
+
+```{r}
+d = read.csv("../data/clean/data.csv",
+             fileEncoding = "utf-8",
+             encoding = 'utf-8')
+```
+
+See https://michaelleegiordano.com/r/multilevel-modeling-in-r/
+
+```{r}
+
+d = d[sample(1:nrow(d),2000),]
+
+summary(lm(AAM~ 1 + pcftr, data=d))
+
+fit_mm <- 
+  brm(AAM ~ 1 + pcftr + 
+        (1 | mm(G1, G2, G3, # genuses
+                weights = cbind(G1.p, G2.p, G3.p))), 
+      data   = d,
+      warmup = 50,
+      iter   = 100,
+      chains = 4,)
+
+plot(fit_mm)
+stanplot((fit_mm))
+
+```
+
