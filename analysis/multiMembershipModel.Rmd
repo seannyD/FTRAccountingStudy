@@ -34,6 +34,7 @@ fit_mm <-
 
 plot(fit_mm)
 stanplot((fit_mm))
+#plot(marginal_effects(fit_mm, effects = "pcftr"))
 
 ```
 
