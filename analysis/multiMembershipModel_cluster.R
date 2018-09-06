@@ -5,6 +5,8 @@ numChains = 1
 
 load("../data/clean/data_min.Rdat")
 
+d$AAM = d$AAM + 0.00001
+
 fit_mm <- 
   brm(AAM ~ 1 + pcftr + 
         invpro+pd+indiv+mas+ua+lto+
