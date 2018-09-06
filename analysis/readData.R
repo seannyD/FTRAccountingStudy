@@ -55,7 +55,9 @@ write.csv(d,"../data/clean/data.csv",
           fileEncoding = "utf-8")
 
 # Make minimal file for cluster run
-d = d[,c("AAM","pcftr","G1","G2","G3","G1.p","G2.p","G3.p")]
+d = d[,c("AAM","pcftr","G1","G2","G3","G1.p","G2.p","G3.p",
+         'invpro', 'pd', 'indiv', 'mas', 'ua', 'lto', 'indul', 'ggr', 'SIZE', 'BTM', 'LEV', 'ROA', 'ISSUE', 'MEET', 'LOSS', 'fyear', 'gv
+key', 'indus')]
 
 save(d,file = "../data/clean/data_min.Rdat")
 
