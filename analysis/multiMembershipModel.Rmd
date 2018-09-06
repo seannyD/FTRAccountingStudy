@@ -3,11 +3,21 @@ title: "Untitled"
 output: html_document
 ---
 
-```{r}
+```{r echo=F,eval=F}
+setwd("~/Documents/Bristol/FTRAccounting/FTRAccountingStudy/analysis/")
+```
+
+# Introduction
+
+See https://michaelleegiordano.com/r/multilevel-modeling-in-r/
+
+# Load libraries
+
+```{r message=F,warning=F}
 library(brms)
 ```
 
-Load data
+# Load data
 
 ```{r}
 d = read.csv("../data/clean/data.csv",
@@ -15,26 +25,52 @@ d = read.csv("../data/clean/data.csv",
              encoding = 'utf-8')
 ```
 
-See https://michaelleegiordano.com/r/multilevel-modeling-in-r/
+# Run models
+
+Linear model:
+
+```{r}
+#d = d[sample(1:nrow(d),2000),]
+
+summary(lm(AAM ~
+             pcftr +
+             invpro+pd+indiv+mas+ua+lto+
+             indul+ggr+SIZE+BTM+LEV+ROA+
+             ISSUE+MEET+LOSS, data=d),
+        family=exponential)
+```
+
 
 ```{r}
 
-d = d[sample(1:nrow(d),2000),]
+#reg AAM $vv4 $v2 yr_dum* indus_dum*, vce(cluster gvkey) 
+#reg AAM pcftr invpro pd indiv mas ua lto indul ggr SIZE BTM LEV ROA ISSUE MEET LOSS
 
-summary(lm(AAM~ 1 + pcftr, data=d))
+d$fyear = factor(d$fyear)
+d$indus = factor(d$indus)
+
+
+d = d[sample(1:nrow(d),3000),]
 
 fit_mm <- 
   brm(AAM ~ 1 + pcftr + 
+             invpro+pd+indiv+mas+ua+lto+
+             indul+ggr+SIZE+BTM+LEV+ROA+
+             ISSUE+MEET+LOSS+
+        (1 | gvkey) +
+        (1 | fyear) +
+        (1 | indus) +
         (1 | mm(G1, G2, G3, # genuses
                 weights = cbind(G1.p, G2.p, G3.p))), 
       data   = d,
-      warmup = 50,
-      iter   = 100,
-      chains = 4,)
+      family = exponential,
+      warmup = 0,
+      iter   = 1,
+      thin =   1,
+      chains = 1,
+      save_dso = TRUE)
 
-plot(fit_mm)
-stanplot((fit_mm))
-#plot(marginal_effects(fit_mm, effects = "pcftr"))
+save(fit_mm,file="../data/clean/brm_model_langFamRanEf.Rdat")
 
 ```
 
