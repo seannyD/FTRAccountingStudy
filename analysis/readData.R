@@ -58,6 +58,8 @@ write.csv(d,"../data/clean/data.csv",
 d = d[,c("AAM","pcftr","G1","G2","G3","G1.p","G2.p","G3.p",
          'invpro', 'pd', 'indiv', 'mas', 'ua', 'lto', 'indul', 'ggr', 'SIZE', 'BTM', 'LEV', 'ROA', 'ISSUE', 'MEET', 'LOSS', 'fyear', 'gvkey', 'indus')]
 
+d = d[complete.cases(d),]
+
 save(d,file = "../data/clean/data_min.Rdat")
 
 #####
