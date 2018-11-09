@@ -65,6 +65,8 @@ library(MASS)
 library(ggplot2)
 library(RColorBrewer)
 library(MCMCglmm)
+library(ape)
+library(caper)
 ```
 
 # Load data
@@ -109,6 +111,14 @@ keyVar = c("invpro","pd","indiv","mas",
   "BTM","LEV","ROA","MEET","LOSS")
 d2 = d2[complete.cases(d2[,keyVar,]),]
 ```
+
+Table of languages:
+```{r}
+data.frame(
+  tapply(d2$strongftr,as.character(d2$loc),head,n=1)
+)
+```
+
 
 Convert to factors:
 
@@ -522,16 +532,6 @@ summary(mB1GammaIE)
 
 ## Phylogenetic test
 
-(not yet working fully)
-
-```{r eval=F}
-library(ape)
-library(caper)
-library(phytools)
-library(MCMCglmm)
-```
-
-
 Much of the data is linked to the Indo-European language family. We can use a phylogenetic tree (Bourckaert et al., 2012) to investigate the relationship between AAM and FTR when taking more fine-grained distinctions in linguistic history.
 
 Subset of variables for the indo-european language family:
@@ -552,6 +552,21 @@ tree = read.nexus(file = "../data/raw/trees/bouckaert_et_al2012-d-place_2.NEXUS"
 dplaceLangs = countryMainLanguageFamily$DPlaceLang[countryMainLanguageFamily$DPlaceLang!=""]
 tree = drop.tip(tree,tree$tip.label[!tree$tip.label %in% dplaceLangs])
 ```
+
+```{r echo=F}
+treePrint = tree
+treePrint$tip.label= gsub("_ST","",treePrint$tip.label)
+treePrint$tip.label= gsub("_Mod","",treePrint$tip.label)
+treePrint$tip.label= gsub("_List","",treePrint$tip.label)
+treePrint = ladderize(treePrint)
+pdf("../results/tree.pdf", width=7, height=5.5)
+ape::plot.phylo(treePrint,root.edge = T,edge.width=8,label.offset = 100)
+axisPhylo(xpd=T)
+text(3000,-3.5,"Years before present",xpd=T)
+lines(c(-200,0),c(15.5,15.5),lwd=8)
+dev.off()
+```
+
 
 Collapse AAM and FTR within languages, and scale and center the AAM variable.
 
@@ -619,7 +634,7 @@ There is no significant relationship between AAM and FTR.
 
 Do the same test for Long-Term Orientation:
 
-```{r}
+```{r cache=T}
 set.seed(12829)
 phyloModelLTO<-MCMCglmm(
   AAM ~ LTO,
