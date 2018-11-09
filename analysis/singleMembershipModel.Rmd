@@ -234,6 +234,13 @@ Yes, model fit significantly improves. The effect of FTR is even weaker:
 summary(mB2)
 ```
 
+Calculate p-value for effect of FTR:
+
+```{r}
+mB2_noFTR = update(mB2, ~. - strongftr)
+anova(mB2,mB2_noFTR)
+```
+
 
 \newpage
 
