@@ -10,7 +10,7 @@ try(setwd("~/Documents/Bristol/FTRAccounting/FTRAccountingStudy/analysis/"))
 ```
 
 ```{r echo=F}
-getMEText = function(r,ef, wald=NULL, showWald=F){
+getMEText = function(r,ef, wald=NULL, showWald=F,returnText=T){
   
   AIC = r[2,]$AIC
   loglikDiff = signif(diff(r$logLik),2)
@@ -42,9 +42,12 @@ getMEText = function(r,ef, wald=NULL, showWald=F){
     begin = 'There was a significant'  
   }
   
-  
-  return(paste(begin,ef,"(",wald.text,"log likelihood difference =",
+  if(returnText){
+    return(paste(begin,ef,"(",wald.text,"log likelihood difference =",
                loglikDiff,", df = ",df,", Chi Squared =", chi,", p = ",p,")."))
+  } else{
+    return(c(est,loglikDiff,df,chi,p))
+  }
 }
 ```
 
@@ -322,6 +325,42 @@ dev.off()
 Without a random intercept by main language family: `r getMEText(anova(mA0,mA1), "main effect of FTR",summary(mA1)$coef['strongftr1',])`
 
 With a random intercept by main language family: `r getMEText(anova(mB0,mB1), "main effect of FTR",summary(mB1)$coef['strongftr1',])`
+
+\newpage
+
+# Other effects
+
+Below are some statistics for other effects, using the same method as above:
+
+```{r cache=T}
+resOther = data.frame(
+  Label = NA,
+  Beta = NA,
+  loglikDiff = NA,
+  df = NA,
+  chisq.test = NA,
+  p = NA, stringsAsFactors = F)
+for(v in c("pd",'indiv','mas',
+           'ua','lto','indul','ggr',
+           'SIZE',"BTM","LEV","ROA")){
+  mAOther0 = update(mA1, paste("~ . -",v))
+  mAOtherAnova = anova(mAOther0,mA1)
+  mBOther0 = update(mB1, paste("~ . -",v))
+  mBOtherAnova = anova(mBOther0,mB1)
+  mARes = getMEText(mAOtherAnova,"X",summary(mA1)$coef[v,],returnText = F)
+  mBRes = getMEText(mBOtherAnova,"X",summary(mB1)$coef[v,],returnText = F)
+  resOther = rbind(resOther, c(paste(v,": No controls"),mARes))
+  resOther = rbind(resOther, c(paste(v,": With Controls"),mBRes))
+}
+resOther = resOther[!is.na(resOther$Label),]
+print(resOther)
+
+resOther2 = cbind(
+  resOther[seq(1,nrow(resOther)-1,by=2),c("Label","Beta","p")],
+  resOther[seq(2,nrow(resOther),by=2),c("Beta","p")])
+write.csv(resOther2,"../results/BetaResults_OtherVariables.csv",row.names = F)
+```
+
 
 \newpage
 
