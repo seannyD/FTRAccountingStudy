@@ -590,17 +590,34 @@ Load tree and drop languages that are not in the dataset:
 tree = read.nexus(file = "../data/raw/trees/bouckaert_et_al2012-d-place_2.NEXUS")
 dplaceLangs = countryMainLanguageFamily$DPlaceLang[countryMainLanguageFamily$DPlaceLang!=""]
 tree = drop.tip(tree,tree$tip.label[!tree$tip.label %in% dplaceLangs])
+lx = read.csv("../data/raw/langftr.csv",stringsAsFactors = F)
+countryMainLanguageFamily[countryMainLanguageFamily$FTR=="",]$FTR = 
+  c("Weak","Strong")[lx[match(countryMainLanguageFamily[countryMainLanguageFamily$FTR=="",]$Country.Code,
+           lx$loc),]$strongftr+1]
 ```
 
 ```{r echo=F}
+pcols = c("black","gray")
 treePrint = tree
+treePrint = ladderize(treePrint)
+#treePrint = rotate(treePrint,28)
+is_tip <- treePrint$edge[,2] <= length(treePrint$tip.label)
+ordered_tips <- treePrint$edge[is_tip, 2]
+ordered_tip_labels <- treePrint$tip.label[ordered_tips]
+treeFTR = countryMainLanguageFamily[
+  match(treePrint$tip.label,
+        countryMainLanguageFamily$DPlaceLang),]$FTR
+names(treeFTR) = ordered_tip_labels
 treePrint$tip.label= gsub("_ST","",treePrint$tip.label)
 treePrint$tip.label= gsub("_Mod","",treePrint$tip.label)
 treePrint$tip.label= gsub("_List","",treePrint$tip.label)
-treePrint = ladderize(treePrint)
 pdf("../results/tree.pdf", width=7, height=5.5)
-ape::plot.phylo(treePrint,root.edge = T,edge.width=8,label.offset = 100)
+ape::plot.phylo(treePrint,root.edge = T,edge.width=8,label.offset = 150)
 axisPhylo(xpd=T)
+tiplabels(pch = c(17,19)[as.numeric(as.factor(treeFTR))], 
+          col = pcols[as.numeric(as.factor(treeFTR))],
+          adj = 2.5, cex = 2)
+#tiplabels(text=names(treeFTR))
 text(3000,-3.5,"Years before present",xpd=T)
 lines(c(-200,0),c(15.5,15.5),lwd=8)
 dev.off()
