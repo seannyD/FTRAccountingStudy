@@ -70,6 +70,7 @@ library(RColorBrewer)
 library(MCMCglmm)
 library(ape)
 library(caper)
+library(stargazer)
 ```
 
 # Load data
@@ -706,4 +707,43 @@ phyloModelLTO<-MCMCglmm(
   burnin=burnin) 
 summary(phyloModelLTO)
 ```
+
+\newpage
+
+## OLS with clustered errors
+
+Run an OLS regression, then print the results when clustering standard errors by language family.  This uses code from Beautrelet (2018) and Hlavac (2018).
+
+Beautrelet, I. (2018) https://github.com/IsidoreBeautrelet/economictheoryblog
+
+Hlavac, Marek (2018). stargazer: Well-Formatted Regression and Summary Statistics Tables.
+ R package version 5.2.2. https://CRAN.R-project.org/package=stargazer 
+
+
+```{r}
+source("robust_summary.R")
+reg <- lm(AAM.scaled ~
+             strongftr +
+             invpro + 
+             pd + indiv + mas + ua + lto + indul + 
+             ggr + 
+             SIZE + BTM + LEV + ROA +
+             MEET + LOSS, 
+             data=d2)
+sStandard = summary(reg)
+sCluster = summary(reg,cluster = c("mainLanguageFamily"))
+
+sStandard
+sCluster
+
+```
+
+```{r echo=T, results='hide'}
+htmlTable =
+  stargazer(reg,reg,se=list(
+  coef(sStandard)[, 2],
+  coef(sCluster)[, 2]
+  ), type = "html", out = "../results/modelResults/RobustClusterResults.html")
+```
+
 
