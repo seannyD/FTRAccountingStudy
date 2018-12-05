@@ -712,7 +712,7 @@ summary(phyloModelLTO)
 
 ## OLS with clustered errors
 
-Run an OLS regression, then print the results when clustering standard errors by language family.  The results below were run using STATA code:
+Run a robust OLS regression, then print the results when clustering standard errors by language family.  The results below were run using STATA code:
 
 ```
 # No clustering
@@ -733,7 +733,7 @@ Linear regression
  AAM_scaled |    Coef.  Std. Err.    t   P>|t|   [95% Conf. Interval]
 ------------+---------------------------------------------------------
  strongftr1 | .1317505  .0033255  39.62  0.000   .1252326    .1382685
-    
+  
 # With clustering by language family
 . reg AAM_scaled strongftr1 invpro pd 
     indiv mas ua lto indul ggr size btm 
@@ -752,7 +752,6 @@ Linear regression
              |           Robust
   AAM_scaled |    Coef.  Std. Err.    t   P>|t|  [95% Conf. Interval]
 -------------+--------------------------------------------------------
-
   strongftr1 | .1317505   .079045   1.67  0.134  -.0505275    .3140286
 
 ```
