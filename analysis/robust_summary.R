@@ -170,7 +170,9 @@ summary.lm <- function (object, correlation = FALSE,
     ans$fstatistic <- c(value = (mss/(p - df.int))/resvar, 
                         numdf = p - df.int, dendf = rdf)
     if(robust==T|(!is.null(cluster))){
-      if(!is.null(cluster)){rdf <- res_length -1}
+      if(!is.null(cluster)){
+        rdf <- length(unique(cluster)) -1
+        }
       pos_coef <- match(names(z$coefficients)[-match("(Intercept)",
                                                      names(z$coefficients))],
                         names(z$coefficients))
