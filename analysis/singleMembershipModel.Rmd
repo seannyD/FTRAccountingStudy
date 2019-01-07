@@ -194,7 +194,7 @@ sjp.lmer(mA1,type="fe",p.kr = F)
 
 ## Model B: with controls for language family
 
-Model `mB0` is the same as `mA0`, but with controls for langauge family. Model `mB1` adds the FTR variable to the model for comparison.
+Model `mB0` is the same as `mA0`, but with controls for language family. Model `mB1` adds the FTR variable to the model for comparison.
 
 ```{r cache=T}
 mB0= update(mA0, ~.+(1 | mainLanguageFamily))
@@ -213,7 +213,7 @@ Compare the two models to assess the significance of the FTR variable:
 anova(mB0,mB1)
 ```
 
-Plot fixed effects with controls for langauge family:
+Plot fixed effects with controls for language family:
 
 ```{r}
 sjp.lmer(mB1,type="fe",p.kr = F)
@@ -301,7 +301,7 @@ plotBoth = function(plotA,plotB,plotB2,showB=T,xlim=c(-0.5,0.5)){
          xpd=T,legend=
            c("Without language family controls",
              "With language family controls",
-             "With langauge family controls (and random slopes)"),
+             "With language family controls (and random slopes)"),
          ncol=1,
          lty=1,col=plotColours,
          text.col=plotColours)
