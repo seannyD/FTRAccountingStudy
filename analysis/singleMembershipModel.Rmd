@@ -54,7 +54,55 @@ getMEText = function(r,ef, wald=NULL, showWald=F,returnText=T){
 
 # Introduction
 
-Test the relationship between strong/weak FTR and AAM, with and without controls for language family.
+This document shows the statistical procedure and R code for testing the relationship between strong/weak FTR and accrual based earnings management (AAM), with and without controls for language family.
+
+We start by describing the variables, then showing how the data was loaded and linked to the language family data.  We then demonstrate that the AAM is best modelled with a gamma distribution (see later in the document for the same test with gaussian distributions).
+
+The mixed effecst modelling section runs the main statistical models with and without controls for language family.
+
+The next sections demonstrate a series of alterantive tests, including:
+
+-  Assuming a gaussian distribution
+-  A decision tree analysis that takes into account non-linear effects and interactions.
+-  A visualisation of differences between language families
+-  A test that uses continuous historical distances from a phylogenetic tree
+-  An OLS regression with cluster robust standard errors
+
+
+## Variables
+
+Each observation in the data is a single company within a particular country.
+
+-  `AAM`: accrual-based earnings management, following Kothari et al. (2005).
+-  `strongftr`: Whether the main language of the country has a 'strong' Future Tense Reference system, according to Chen (2013).
+-  `mainLanguageFamily` (constructed below): The language family of the main language(s) in the company's country.
+
+Country-level economic predictors:
+
+-  `invpro`: Investor protection score, based on the anti-director index from Djankov et al. (2008)
+-  `ggr`: Country GDP growth rate
+
+Country-level cultural predictors:
+
+-  `pd`: Power distance index, based on Hofstede (2001)
+-  `indiv`: Individualism/collectivism score, based on Hofstede (2001)
+-  `mas`: Masculinity/femininity score, based on Hofstede (2001)
+-  `ua`: Uncertainty avoidance score, based on Hofstede (2001)
+-  `lto`: Long-/short-term orientation score, based on Hofstede (2001);
+-  `indul`: Indulgence, based on Hofstede (2001);
+
+Company-level economic predictors:
+
+-  `SIZE`: Company size, measured as the natural logarithm of total assets adjusted for inflation rate
+-  `BTM`: Company book value of common equity divided by common value of equity;
+-  `LEV`: Company leverage, measured as short- and long- term debt divided by total assets
+-  `ROA`: Company return on assets, measured as income before extraordinary items divided by total assets
+-  `MEET`: Dummy variable that takes one for firm-year observations with actual annual EPS greater than or equal to consensus analyst earnings forecast, zero otherwise.
+-  `LOSS`: Dummy variable that takes one for firm-year observations with negative income before extraordinary items, zero otherwise.
+
+
+\clearpage
+\newpage
 
 # Load libraries
 
@@ -71,6 +119,8 @@ library(MCMCglmm)
 library(ape)
 library(caper)
 library(stargazer)
+library(dplyr)
+library(lattice)
 ```
 
 # Load data
@@ -133,13 +183,12 @@ d2$LOSS = factor(d2$LOSS)
 d2$strongftr = factor(d2$strongftr)
 ```
 
-Scale varaibles:
+Scale and center varaibles:
 
 ```{r}
 d2Orig = d2
 # Take log of AAM
 d2$logAAM = log(1+d2$AAM)
-#d2$logAAM = d2$logAAM - median(d2$logAAM,na.rm = T)
 # Scale and center continuous variables
 for(v in c("pd",'indiv','mas',
            'ua','lto','indul','ggr',
@@ -151,9 +200,264 @@ d2$AAM.scaled = scale(d2$AAM)
 
 \newpage
 
+# Modelling AAM with a gamma distribution
+
+The distribution of the AAM variable is highly skewed and values below zero are not permitted:
+
+```{r}
+hist(d2$AAM)
+normalDist = rnorm(n=length(d2$AAM),
+                   mean = mean(d2$AAM),
+                   sd = sd(d2$AAM))
+ks.test(d2$AAM,normalDist)
+```
+
+Even the log-transformed variable is skewed:
+
+```{r}
+hist(d2$logAAM)
+```
+
+If we assume a Gaussian distribution, the statistical models below produce very poor fits, as can be seen in this QQ plot below:
+
+![QQ plot for a model with a Gaussian distribution](../results/misc/qqplot_Gaussian.png)
+
+We can compare how Beta and Gamma distributions fit the log data:
+
+```{r echo=F,warning=F,message=F}
+hist(d2$logAAM[d2$logAAM<0.5]+0.0001,
+     breaks=100,probability = T,
+     main="Log AAM")
+
+fit.beta <- fitdistr( d2$logAAM[d2$logAAM<0.5]+0.0001, 
+                      "beta", start = list( shape1=1, shape2=0.1 ))
+fit.gamma <- fitdistr(d2$logAAM[d2$logAAM<0.5]+0.0001,
+                      "Gamma", start = list(shape=1,rate=1))
+
+curve(dbeta(x, 
+             shape1 =fit.beta$estimate[[1]],
+             shape2=fit.beta$estimate[[2]]),
+      from=0,to=0.5, n=500, add=T,col=2)
+curve(dgamma(x, 
+             shape =fit.gamma$estimate[[1]],
+             rate=fit.gamma$estimate[[2]]),
+      from=0,to=0.5, n=500, add=T,col=3)
+
+# Gamma curve
+curve(dgamma(x, shape=1.08, rate=10.2),
+      from=0,to=0.5, n=500,add=T,col=4)
+# Legend
+legend(0.3,8, 
+    legend=c("Beta",
+    paste(c("Gamma (", round(fit.gamma$estimate,2),")"),collapse=" "),
+          "Gamma ( 1.08 10.2 )"),col=2:4,lty=1)
+
+```
+
+The Gamma distribution seems to fit best. We can compare the QQ plot of the model (fit below):
+
+![QQ plot for the model with a Gamma distribution](../results/misc/qqplot_Gamma.png)
+
+Still not perfect at higher levels, but much better than the Gaussian models.
+
+\newpage
+
 # Mixed effects modelling
 
-## Model A: no controls for language family
+Fit a model with a Gamma distribution (without language family controls, with a random intercept by family and with a random intercept and slope):
+
+```{r cache=T}
+mA0Gamma = glmer(logAAM+0.0001 ~ 1 +
+             pd + indiv + mas + ua + lto + indul + 
+             ggr + invpro + 
+             SIZE + BTM + LEV + ROA + MEET + LOSS +
+             (1 | fyear) +
+             (1 | indus),
+           data = d2,
+           family=Gamma(link="log"))
+
+mA1Gamma = update(mA0Gamma,~.+strongftr)
+```
+
+Now we add a random intercept for each language family:
+
+```{r cache=T}
+mB0Gamma = glmer(logAAM+0.0001 ~ 1 +
+             pd + indiv + mas + ua + lto + indul + 
+             ggr + invpro + 
+             SIZE + BTM + LEV + ROA + MEET + LOSS +
+             (1 | fyear) +
+             (1 | indus) +
+             (1 | mainLanguageFamily),
+           data = d2,
+           family=Gamma(link="log"))
+mB1Gamma = update(mB0Gamma, ~.+strongftr)
+```
+
+We also add a random slope for FTR by language family:
+
+```{r cache=T}
+mB2Gamma= glmer(logAAM+0.0001 ~ 1 +
+             pd + indiv + mas + ua + lto + indul + 
+             ggr + invpro + 
+             SIZE + BTM + LEV + ROA + MEET + LOSS +
+             strongftr +
+             (1 | fyear) +
+             (1 | indus) +
+             (1 + I(as.numeric(strongftr)) | mainLanguageFamily),
+           data = d2,
+           family=Gamma(link="log"))
+```
+
+Use model comparison to see if the random effects are explaining variance in the model:
+
+```{r}
+anova(mA1Gamma,mB1Gamma,mB2Gamma)
+```
+
+
+Check that the model is producing a sensible distribution:
+
+```{r}
+modelPredictions = exp(predict(mB1Gamma))-0.0001
+par(mfrow=c(1,2))
+hist(modelPredictions[modelPredictions<1],main="Predicted")
+hist(d2$logAAM[d2$logAAM<1],main="Actual")
+par(mfrow=c(1,1))
+png("../results/misc/qqplot_Gamma.png")
+qqnorm(resid(mB1Gamma))
+qqline(resid(mB1Gamma),col=2)
+dev.off()
+```
+
+
+Model results:
+
+```{r}
+summary(mA1Gamma)
+summary(mB1Gamma)
+summary(mB2Gamma)
+```
+
+\newpage
+
+Plot fixed effects for all models (code hidden):
+
+```{r echo=F,message=F,warning=F}
+
+plotColours = c("black",brewer.pal(3,"Set2")[2:1])
+
+plotAGamma = get_model_data(mA1Gamma,type="est")
+plotBGamma = get_model_data(mB1Gamma,type="est")
+plotB2Gamma = get_model_data(mB2Gamma,type="est")
+
+x_B2Points = 1:length(plotB2Gamma$term)
+x_BPoints = x_B2Points + 0.33
+x_APoints = x_B2Points + 0.66
+
+plotBoth = function(plotA,plotB,plotB2,showB=T,xlim=c(-0.5,0.5),legend.x.pos=-0.5){
+  par(mar=c(3,5,4,1))
+  plot(xlim,c(1,15.5),type='n',yaxt='n',xlab="",ylab="")
+  abline(h=x_B2Points-0.16,col="gray")
+  
+  points(plotA$estimate,x_APoints,pch=16,col=plotColours[1])
+  arrows(plotA$conf.low,x_APoints,
+         plotA$conf.high,x_APoints, 
+         code=3,angle = 90,length = 0.1)
+  if(showB){
+    points(plotB$estimate,x_BPoints,
+           col=plotColours[2],pch=16)
+    arrows(plotB$conf.low,x_BPoints,
+           plotB$conf.high,x_BPoints,
+           code=3,angle = 90,length = 0.1,col=plotColours[2])
+    points(plotB2$estimate,
+           x_B2Points,
+           col=plotColours[3],pch=16)
+    arrows(plotB2$conf.low,x_B2Points,
+           plotB2$conf.high,x_B2Points,
+           code=3,angle = 90,length = 0.1,col=plotColours[3])
+    
+  }
+  axis(2,at=x_B2Points+0.25,labels = plotA$term,las=2)
+  abline(v=0)
+  legend(legend.x.pos,19.5,bty='n',
+         xpd=T,legend=
+           c("Without language family controls",
+             "With language family controls",
+             "With language family controls (and random slopes)"),
+         ncol=1,
+         lty=1,col=plotColours,
+         text.col=plotColours)
+}
+
+plotBoth(plotAGamma,plotBGamma,plotB2Gamma,xlim=c(-0.7,0.7),legend.x.pos=-0.65)
+
+pdf("../results/singleMembershipModel_GammaDist.pdf",
+    width=6,height=5)
+plotBoth(plotAGamma,plotBGamma,plotB2Gamma,xlim=c(-0.7,0.7),legend.x.pos=-0.65)
+dev.off()
+
+```
+
+View random effects for language family
+
+```{r}
+dotplot(ranef(mB1Gamma))$mainLanguageFamily
+dotplot(ranef(mB2Gamma))$mainLanguageFamily
+```
+
+
+# Summary
+
+Without a random intercept by main language family: `r getMEText(anova(mA0Gamma,mA1Gamma), "main effect of FTR",summary(mA1Gamma)$coef['strongftr1',])`
+
+With a random intercept by main language family: `r getMEText(anova(mB0Gamma,mB1Gamma), "main effect of FTR",summary(mB1Gamma)$coef['strongftr1',])`
+
+\newpage
+
+# Other effects
+
+Below are some statistics for other effects, using the same method as above:
+
+```{r cache=T}
+resOther = data.frame(
+  Label = NA,
+  Beta = NA,
+  loglikDiff = NA,
+  df = NA,
+  chisq.test = NA,
+  p = NA, stringsAsFactors = F)
+for(v in c("pd",'indiv','mas',
+           'ua','lto','indul','ggr',
+           'SIZE',"BTM","LEV","ROA")){
+  mAOther0 = update(mA1Gamma, paste("~ . -",v))
+  mAOtherAnova = anova(mAOther0,mA1Gamma)
+  mBOther0 = update(mB2Gamma, paste("~ . -",v))
+  mBOtherAnova = anova(mBOther0,mB2Gamma)
+  mARes = getMEText(mAOtherAnova,"X",summary(mA1Gamma)$coef[v,],returnText = F)
+  mBRes = getMEText(mBOtherAnova,"X",summary(mB2Gamma)$coef[v,],returnText = F)
+  resOther = rbind(resOther, c(paste(v,": No controls"),mARes))
+  resOther = rbind(resOther, c(paste(v,": With Controls"),mBRes))
+}
+resOther = resOther[!is.na(resOther$Label),]
+print(resOther)
+
+resOther2 = cbind(
+  resOther[seq(1,nrow(resOther)-1,by=2),c("Label","Beta","p")],
+  resOther[seq(2,nrow(resOther),by=2),c("Beta","p")])
+write.csv(resOther2,"../results/BetaResults_OtherVariables.csv",row.names = F)
+```
+
+
+\newpage
+
+# Alternative tests
+
+\newpage
+
+## Gaussian distribution model
+
+### Model A: no controls for language family
 
 Model `mA0` is a baseline model and model `mA1` adds the effect for FTR.
 
@@ -187,18 +491,18 @@ anova(mA0,mA1)
 
 Plot fixed effects:
 ```{r}
-sjp.lmer(mA1,type="fe",p.kr = F)
+plot_model(mA1,type="est",p.kr = F)
 ```
 
 \newpage
 
-## Model B: with controls for language family
+### Model B: with controls for language family
 
 Model `mB0` is the same as `mA0`, but with controls for language family. Model `mB1` adds the FTR variable to the model for comparison.
 
 ```{r cache=T}
-mB0= update(mA0, ~.+(1 | mainLanguageFamily))
-mB1= update(mB0, ~.+strongftr)
+mB0= update(mA0,  ~.+(1 | mainLanguageFamily))
+mB1= update(mB0,  ~.+strongftr)
 ```
 
 Look at the estimates for `mB1`:
@@ -216,10 +520,10 @@ anova(mB0,mB1)
 Plot fixed effects with controls for language family:
 
 ```{r}
-sjp.lmer(mB1,type="fe",p.kr = F)
+plot_model(mB1,type="est",p.kr = F)
 ```
 
-## Random slopes for FTR
+### Random slopes for FTR
 
 Test if adding a random slope for FTR by language family significantly improves the fit of the model:
 
@@ -255,57 +559,12 @@ mB2_noFTR = update(mB2, ~. - strongftr)
 anova(mB2,mB2_noFTR)
 ```
 
+Plot fixed effects:
 
-\newpage
-
-Plot both models (code hidden):
-
-```{r echo=F,message=F,warning=F}
-
-plotColours = c("black",brewer.pal(3,"Set2")[2:1])
-
-plotA = sjp.lmer(mA1,type="fe",p.kr = F,geom.colors = c(plotColours[1],plotColours[1]),prnt.plot = F)
-plotB = sjp.lmer(mB1,type="fe",p.kr = F,geom.colors = c(plotColours[2],plotColours[2]),prnt.plot = F)
-plotB2 = sjp.lmer(mB2,type="fe",p.kr = F,geom.colors = c(plotColours[3],plotColours[3]),prnt.plot = F)
-
-x_B2Points = 1:length(plotB2$data$term)
-x_BPoints = x_B2Points + 0.33
-x_APoints = x_B2Points + 0.66
-
-plotBoth = function(plotA,plotB,plotB2,showB=T,xlim=c(-0.5,0.5)){
-  par(mar=c(3,5,4,1))
-  plot(xlim,c(1,15.5),type='n',yaxt='n',xlab="",ylab="")
-  abline(h=x_B2Points-0.16,col="gray")
-  
-  points(plotA$data$estimate,x_APoints,pch=16,col=plotColours[1])
-  arrows(plotA$data$conf.low,x_APoints,
-         plotA$data$conf.high,x_APoints, 
-         code=3,angle = 90,length = 0.1)
-  if(showB){
-    points(plotB$data$estimate,x_BPoints,
-           col=plotColours[2],pch=16)
-    arrows(plotB$data$conf.low,x_BPoints,
-           plotB$data$conf.high,x_BPoints,
-           code=3,angle = 90,length = 0.1,col=plotColours[2])
-    points(plotB2$data$estimate,
-           x_B2Points,
-           col=plotColours[3],pch=16)
-    arrows(plotB2$data$conf.low,x_B2Points,
-           plotB$data$conf.high,x_B2Points,
-           code=3,angle = 90,length = 0.1,col=plotColours[3])
-    
-  }
-  axis(2,at=x_B2Points+0.25,labels = plotA$data$term,las=2)
-  abline(v=0)
-  legend(-0.5,19.5,bty='n',
-         xpd=T,legend=
-           c("Without language family controls",
-             "With language family controls",
-             "With language family controls (and random slopes)"),
-         ncol=1,
-         lty=1,col=plotColours,
-         text.col=plotColours)
-}
+```{r}
+plotA = get_model_data(mA1,type="est")
+plotB = get_model_data(mB1,type="est")
+plotB2 = get_model_data(mB2,type="est")
 
 plotBoth(plotA,plotB,plotB2)
 
@@ -313,192 +572,16 @@ pdf("../results/singleMembershipModel.pdf",
     width=6,height=5)
   plotBoth(plotA,plotB,plotB2)
 dev.off()
-
-pdf("../results/singleMembershipModel_AOnly.pdf",
-    width=6,height=5)
-  plotBoth(plotA,plotB,plotB2,F)
-dev.off()
-
 ```
 
-# Summary
+### Summary of Gaussian model
 
 Without a random intercept by main language family: `r getMEText(anova(mA0,mA1), "main effect of FTR",summary(mA1)$coef['strongftr1',])`
 
 With a random intercept by main language family: `r getMEText(anova(mB0,mB1), "main effect of FTR",summary(mB1)$coef['strongftr1',])`
 
-\newpage
 
-# Other effects
-
-Below are some statistics for other effects, using the same method as above:
-
-```{r cache=T}
-resOther = data.frame(
-  Label = NA,
-  Beta = NA,
-  loglikDiff = NA,
-  df = NA,
-  chisq.test = NA,
-  p = NA, stringsAsFactors = F)
-for(v in c("pd",'indiv','mas',
-           'ua','lto','indul','ggr',
-           'SIZE',"BTM","LEV","ROA")){
-  mAOther0 = update(mA1, paste("~ . -",v))
-  mAOtherAnova = anova(mAOther0,mA1)
-  mBOther0 = update(mB1, paste("~ . -",v))
-  mBOtherAnova = anova(mBOther0,mB1)
-  mARes = getMEText(mAOtherAnova,"X",summary(mA1)$coef[v,],returnText = F)
-  mBRes = getMEText(mBOtherAnova,"X",summary(mB1)$coef[v,],returnText = F)
-  resOther = rbind(resOther, c(paste(v,": No controls"),mARes))
-  resOther = rbind(resOther, c(paste(v,": With Controls"),mBRes))
-}
-resOther = resOther[!is.na(resOther$Label),]
-print(resOther)
-
-resOther2 = cbind(
-  resOther[seq(1,nrow(resOther)-1,by=2),c("Label","Beta","p")],
-  resOther[seq(2,nrow(resOther),by=2),c("Beta","p")])
-write.csv(resOther2,"../results/BetaResults_OtherVariables.csv",row.names = F)
-```
-
-
-\newpage
-
-# Alternative tests
-
-\newpage
-
-## Gamma distribution model
-
-The distribution of the AAM variable is highly skewed and values below zero are not permitted:
-
-```{r}
-hist(d2$AAM)
-normalDist = rnorm(n=length(d2$AAM),
-                   mean = mean(d2$AAM),
-                   sd = sd(d2$AAM))
-ks.test(d2$AAM,normalDist)
-```
-
-Even the log-transformed variable is skewed:
-
-```{r}
-hist(d2$logAAM)
-```
-
-This leads to the models above (which use Gaussian distributions) producing very poor fits:
-
-```{r echo=F,message=F,warning=F}
-png("../results/misc/qqplot_Gaussian.png")
-qqnorm(resid(mB1))
-qqline(resid(mB1),col=2)
-dev.off()
-```
-
-![](../results/misc/qqplot_Gaussian.png)
-
-Here we compare how Beta and Gamma distributions fit the log data:
-
-```{r echo=F,warning=F,message=F}
-hist(d2$logAAM[d2$logAAM<0.5]+0.0001,
-     breaks=100,probability = T,
-     main="Log AAM")
-
-fit.beta <- fitdistr( d2$logAAM[d2$logAAM<0.5]+0.0001, 
-                      "beta", 
-                      start = list( shape1=1, shape2=0.1 ))
-
-fit.gamma <- fitdistr(d2$logAAM[d2$logAAM<0.5]+0.0001,
-                      "Gamma",
-                      start = list(shape=1,rate=1))
-
-curve(dbeta(x, 
-             shape1 =fit.beta$estimate[[1]],
-             shape2=fit.beta$estimate[[2]]),
-      from=0,to=0.5, n=500,
-      add=T,col=2)
-
-curve(dgamma(x, 
-             shape =fit.gamma$estimate[[1]],
-             rate=fit.gamma$estimate[[2]]),
-      from=0,to=0.5, n=500,
-      add=T,col=3)
-
-# Gamma curve
-curve(dgamma(x, 
-             shape=1.08,
-             rate=10.2),
-      from=0,to=0.5, n=500,
-      add=T,col=4)
-# Legend
-legend(0.3,8, 
-       legend=c("Beta",
-          paste(c("Gamma (",
-                round(fit.gamma$estimate,2),")"),
-                collapse=" "),
-          "Gamma ( 1.08 10.2 )"),
-                  col=2:4,lty=1)
-
-```
-
-The Gamma distribution seems to fit best.  Fit a model with a Gamma distribution (without language family controls, with a random intercept by family and with a random intercept and slope):
-
-```{r cache=T}
-mA1Gamma = glmer(logAAM+0.0001 ~ 1 +
-             invpro + 
-             pd + indiv + mas + ua + lto + indul + 
-             ggr + 
-             SIZE + BTM + LEV + ROA +
-             MEET + LOSS +
-             strongftr + 
-             (1 | fyear) +
-             (1 | indus),
-           data = d2,
-           family=Gamma(link="log"))
-mB1Gamma = update(mA1Gamma, ~.+(1 | mainLanguageFamily))
-mB2Gamma= update(mB1Gamma,
-          ~.+(0+strongftr|mainLanguageFamily))
-```
-
-Check that the model is producing a sensible distribution:
-
-```{r}
-modelPredictions = exp(predict(mB1Gamma))-0.0001
-par(mfrow=c(1,2))
-hist(modelPredictions[modelPredictions<1],main="Predicted")
-hist(d2$logAAM[d2$logAAM<1],main="Actual")
-par(mfrow=c(1,1))
-png("../results/misc/qqplot_Gamma.png")
-qqnorm(resid(mB1Gamma))
-qqline(resid(mB1Gamma),col=2)
-dev.off()
-```
-
-![](../results/misc/qqplot_Gamma.png)
-
-Still not perfect at higher levels, but much better than the Gaussian models.
-
-Model results:
-
-```{r}
-summary(mA1Gamma)
-summary(mB1Gamma)
-summary(mB2Gamma)
-```
-
-```{r echo=F}
-plotAGamma = sjp.lmer(mA1Gamma,type="fe",p.kr = F,geom.colors = c(plotColours[1],plotColours[1]),prnt.plot = F)
-plotBGamma = sjp.lmer(mB1Gamma,type="fe",p.kr = F,geom.colors = c(plotColours[2],plotColours[2]),prnt.plot = F)
-plotB2Gamma = sjp.lmer(mB2Gamma,type="fe",p.kr = F,geom.colors = c(plotColours[3],plotColours[3]),prnt.plot = F)
-
-plotBoth(plotAGamma,plotBGamma,plotB2Gamma)
-
-pdf("../results/singleMembershipModel_GammaDist.pdf")
-plotBoth(plotAGamma,plotBGamma,plotB2Gamma,xlim=c(-0.7,0.7))
-dev.off()
-```
-
+\clearpage
 \newpage
 
 ## Decision tree
@@ -544,12 +627,11 @@ d3 = d2[d2$mainLanguageFamily %in%
           c("Austronesian","Indo-European",
             "Sino-Tibetan","Uralic"),]
 mB2GammaFamily= update(mB2Gamma, data = d3)
-sjp.lmer(mB2GammaFamily,type="fe",p.kr = F)
-sjp.lmer(mB2GammaFamily,type="rs.ri",vars="strongftr",show.legend = T)
+plot_model(mB2GammaFamily,type="est",p.kr = F)
+plot_model(mB2GammaFamily,type="slope",vars="strongftr",show.legend = T)
 ```
 
 ```{r}
-library(dplyr)
 x = d2[d2$mainLanguageFamily %in%
           c("Austronesian","Indo-European",
             "Sino-Tibetan","Uralic"),] %>% 
