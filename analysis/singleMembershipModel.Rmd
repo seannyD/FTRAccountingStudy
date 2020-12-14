@@ -347,16 +347,16 @@ Plot fixed effects for all models (code hidden):
 
 plotColours = c("black",brewer.pal(3,"Set2")[2:1])
 
-plotAGamma = get_model_data(mA1Gamma,type="est")
-plotBGamma = get_model_data(mB1Gamma,type="est")
-plotB2Gamma = get_model_data(mB2Gamma,type="est")
+plotAGamma = get_model_data(mA1Gamma,type="est", transform=NULL)
+plotBGamma = get_model_data(mB1Gamma,type="est", transform=NULL)
+plotB2Gamma = get_model_data(mB2Gamma,type="est", transform=NULL)
 
 x_B2Points = 1:length(plotB2Gamma$term)
 x_BPoints = x_B2Points + 0.33
 x_APoints = x_B2Points + 0.66
 
 plotBoth = function(plotA,plotB,plotB2,showB=T,xlim=c(-0.5,0.5),legend.x.pos=-0.5){
-  par(mar=c(3,5,4,1))
+  par(mar=c(3,6,4,1))
   plot(xlim,c(1,15.5),type='n',yaxt='n',xlab="",ylab="")
   abline(h=x_B2Points-0.16,col="gray")
   
@@ -378,7 +378,27 @@ plotBoth = function(plotA,plotB,plotB2,showB=T,xlim=c(-0.5,0.5),legend.x.pos=-0.
            code=3,angle = 90,length = 0.1,col=plotColours[3])
     
   }
-  axis(2,at=x_B2Points+0.25,labels = plotA$term,las=2)
+  yaxisLabels = as.character(plotA$term)
+  labelReplacements = matrix(
+    c("LOSS1","LOSS",
+    "SIZE","LNSIZE",
+    "ggr","GGROWTH",
+    "indul","INDUL",
+    "lto","LTO",
+    "ua","UA",
+    "mas","MAS",
+    "indiv","INDIV",
+    "pd","PD",
+    "invpro","INVPRO",
+    "strongftr1","Strong FTR",
+    "MEET1","MEET"),ncol=2,byrow = T)
+  yaxisLabels = labelReplacements[match(yaxisLabels,
+                      labelReplacements[,1]),2]
+  yaxisLabels[is.na(yaxisLabels)]= as.character(plotA$term)[is.na(yaxisLabels)]
+
+  
+  axis(2,at=x_B2Points+0.25,
+       labels = yaxisLabels ,las=2)
   abline(v=0)
   legend(legend.x.pos,19.5,bty='n',
          xpd=T,legend=
@@ -412,6 +432,8 @@ dotplot(ranef(mB2Gamma))$mainLanguageFamily
 Without a random intercept by main language family: `r getMEText(anova(mA0Gamma,mA1Gamma), "main effect of FTR",summary(mA1Gamma)$coef['strongftr1',])`
 
 With a random intercept by main language family: `r getMEText(anova(mB0Gamma,mB1Gamma), "main effect of FTR",summary(mB1Gamma)$coef['strongftr1',])`
+
+With a random intercept by main language family and a random slope for FTR by main language family: `r getMEText(anova(mB1Gamma,mB2Gamma), "main effect of FTR",summary(mB2Gamma)$coef['strongftr1',])`
 
 \newpage
 
@@ -562,9 +584,9 @@ anova(mB2,mB2_noFTR)
 Plot fixed effects:
 
 ```{r}
-plotA = get_model_data(mA1,type="est")
-plotB = get_model_data(mB1,type="est")
-plotB2 = get_model_data(mB2,type="est")
+plotA = get_model_data(mA1,type="est", transform = NULL)
+plotB = get_model_data(mB1,type="est", transform = NULL)
+plotB2 = get_model_data(mB2,type="est", transform = NULL)
 
 plotBoth(plotA,plotB,plotB2)
 
@@ -580,6 +602,57 @@ Without a random intercept by main language family: `r getMEText(anova(mA0,mA1),
 
 With a random intercept by main language family: `r getMEText(anova(mB0,mB1), "main effect of FTR",summary(mB1)$coef['strongftr1',])`
 
+
+\clearpage
+\newpage
+
+## Model with average FTR per family
+
+A reviewer asked us to include the mean FTR for the language family as a fixed effect.
+
+```{r cache=TRUE}
+meanFTRPerLangFam = tapply(as.numeric(d2$strongftr)-1,
+                    d2$mainLanguageFamily,mean)
+d2$meanFTR = meanFTRPerLangFam[d2$mainLanguageFamily]
+mA1MeanFTR = glmer(logAAM+0.0001 ~ 1 +
+             pd + indiv + mas + ua + lto + indul + 
+             ggr + invpro + 
+             SIZE + BTM + LEV + ROA + MEET + LOSS +
+             meanFTR +
+             strongftr +
+             (1 | fyear) +
+             (1 | indus),
+           data = d2,
+           family=Gamma(link="log"))
+```
+
+The results are qualitatively the same: FTR is a significant predictor. Note that family mean FTR is not a significant predictor when strong FTR is included in the model:
+
+```{r}
+summary(mA1MeanFTR)
+```
+
+Check model with random intercepts and random slopes:
+
+```{r cache=T}
+mB2MeanFTR= glmer(logAAM+0.0001 ~ 1 +
+             pd + indiv + mas + ua + lto + indul + 
+             ggr + invpro + 
+             SIZE + BTM + LEV + ROA + MEET + LOSS +
+             meanFTR +
+             strongftr +
+             (1 | fyear) +
+             (1 | indus) +
+             (1 + I(as.numeric(strongftr)) | mainLanguageFamily),
+           data = d2,
+           family=Gamma(link="log"))
+```
+
+The results are qualitatively the same. Note that the mean FTR is not a significant predictor when strong FTR is included in the model.
+
+```{r}
+summary(mB2MeanFTR)
+```
 
 \clearpage
 \newpage
