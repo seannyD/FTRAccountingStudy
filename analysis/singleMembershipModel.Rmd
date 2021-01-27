@@ -1,9 +1,12 @@
 ---
-title: "Language and earings management: controlling for linguistic history"
+title: "Language in economics and accounting research: controlling for linguistic history"
+author: "Giorgio Gotti, Seán G. Roberts, Marco Fasan & Cole Robertson"
 output: 
   pdf_document:
     toc: true
 ---
+
+
 
 ```{r echo=F,eval=F}
 try(setwd("~/Documents/Bristol/FTRAccounting/FTRAccountingStudy/analysis/"))
