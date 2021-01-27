@@ -54,7 +54,7 @@ getMEText = function(r,ef, wald=NULL, showWald=F,returnText=T){
 
 # Introduction
 
-This document shows the statistical procedure and R code for testing the relationship between strong/weak FTR and accrual based earnings management (AAM), with and without controls for language family.
+This document shows the statistical procedure and R code for testing the relationship between strong/weak FTR and accrual based earnings management (AAM), with and without controls for language family. The code and data are available on github: [https://github.com/seannyD/FTRAccountingStudy](https://github.com/seannyD/FTRAccountingStudy)
 
 We start by describing the variables, then showing how the data was loaded and linked to the language family data.  We then demonstrate that the AAM is best modelled with a gamma distribution (see later in the document for the same test with gaussian distributions).
 

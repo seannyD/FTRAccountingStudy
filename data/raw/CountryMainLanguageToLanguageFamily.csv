@@ -1,0 +1,64 @@
+X,Country Code,Country Name,FTR,Official Language,Family,ManyLanguages,DPlaceLang
+1,ARG,Argentina,Strong,Spanish,Indo-European,,Spanish
+2,AUS,Australia,Strong,English,Indo-European,,English_ST
+3,AUT,Austria,Weak,German,Indo-European,,
+4,BEL,Belgium,Weak,Dutch,Indo-European,,Dutch_List
+5,BRA,Brazil,Weak,Portuguese,Indo-European,,Portuguese_ST
+6,CAD,Canada,Strong,English,Indo-European,,English_ST
+7,CHL,Chile,Strong,Spanish,Indo-European,,Spanish
+8,COL,Colombia,Strong,Spanish,Indo-European,,Spanish
+9,DEU,Germany,Weak,German,Indo-European,,German_ST
+10,DNK,Denmark,Weak,Danish,Indo-European,,Danish
+11,EGY,Egypt,Strong,Arabic,Afro-Asiatic,,
+12,FIN,Finland,Weak,Finnish,Uralic,,
+13,FRA,France,Strong,French,Indo-European,,French
+14,GBR,United Kingdom,Strong,English,Indo-European,,English_ST
+15,GRC,Greece,Strong,Greek,Indo-European,,Greek_Mod
+16,HKG,Hong Kong,Weak,Cantonese,Sino-Tibetan,,
+17,IDN,Indonesia,Weak,Indonesian,Austronesian,,
+18,IND,India,Strong,Hindi,Indo-European,,Hindi
+19,IRL,Ireland,Strong,English,Indo-European,,English_ST
+20,ISR,Israel,Strong,Hebrew,Afro-Asiatic,,
+21,ITA,Italy,Strong,Italian,Indo-European,,Italian
+22,JPN,Japan,Weak,Japanese,Japonic,,
+23,KOR,South Korea,Strong,Korean,Koreanic,,
+24,MEX,Mexico,Strong,Spanish,Indo-European,,Spanish
+25,MYS,Malaysia,Weak,Malaysian,Austronesian,,
+26,NLD,Netherlands,Weak,Dutch,Indo-European,,Dutch_List
+27,NOR,Norway,Weak,Norwegian,Indo-European,,
+28,NZL,New Zealand,Strong,English,Indo-European,,English_ST
+29,PAK,Pakistan,Strong,Urdu,Indo-European,,Urdu
+30,PER,Peru,Strong,Spanish,Indo-European,,Spanish
+31,PHL,Philippines,Strong,Tagalog,Austronesian,,
+32,PRT,Portugal,Strong,"Portuguese,",Indo-European,,Portuguese_ST
+33,SGP,Singapore,Weak,Mandarin,Sino-Tibetan,,
+34,SWE,Sweden,Weak,Swedish,Indo-European,,Swedish_List
+35,THA,Thailand,Strong,Thai,Tai-Kadai,,
+36,TUR,Turkey,Strong,Turkish,Turkic,,
+37,TWN,Taiwan,Weak,Mandarin,Sino-Tibetan,,
+38,USA,United States of America,Strong,English,Indo-European,,English_ST
+,ZAF,South Africa        ,,,Multi1,Y,
+,CAN,Canada              ,Strong,English,Indo-European,,English_ST
+,CHN,China               ,,Mandarin,Sino-Tibetan,,
+,MAR,Morocco             ,,Arabic,Afro-Asiatic,,
+,VNM,Viet Nam            ,,Vietnamese,Austroasiatic,,
+,CHE,Switzerland         ,,Swiss,Indo-European,,
+,RUS,Russia              ,,Russian,Indo-European,,Russian
+,ESP,Spain               ,,Spanish,Indo-European,,Spanish
+,POL,Poland              ,,Polish,Indo-European,,Polish
+,LKA,Sri Lanka           ,,Sinhala,Indo-European,,Singhalese
+,JOR,Jordan              ,,Arabic,Afro-Asiatic,,
+,BMU,Bermuda             ,,English,Indo-European,,English_ST
+,ARE,United Arab Emirates,,Arabic,Afro-Asiatic,,
+,CZE,Czech Republic      ,,Czech,Indo-European,,Czech
+,KEN,Kenya               ,,English,Multi2,Y,English_ST
+,NGA,Nigeria             ,,English,Multi3,Y,English_ST
+,BGR,Bulgaria            ,,Bulgarian,Indo-European,,Bulgarian
+,LUX,Luxembourg          ,,Luxembourgish,Indo-European,,Luxembourgish
+,ROU,Romania             ,,Romanian,Indo-European,,Romanian_List
+,HUN,Hungary             ,,Hungarian,Uralic,,
+,TUN,Tunisia             ,,Arabic,Afro-Asiatic,,
+,ZWE,Zimbabwe            ,,English,Multi4,Y,English_ST
+,LTU,Lithuania           ,,Lithuanian,Indo-European,,Lithuanian_ST
+,CYP,Cyprus              ,,Cypriot Greek,Indo-European,,Greek_Mod
+,LVA,Latvia ,,Latvian,Indo-European,,Latvian
